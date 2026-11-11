@@ -1,0 +1,16 @@
+# Third-party SDKs are not part of this repository - see docs/BUILD.md
+/JUCE/
+/ASIOSDK/
+
+# Build output
+/build/
+/build-test/
+/dist/
+*.zip
+*.rar
+
+# Editor / tool folders
+/.vs/
+/.vscode/
+/.claude/
+assets/icons/_preview.png
