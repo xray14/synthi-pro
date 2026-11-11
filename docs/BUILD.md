@@ -35,7 +35,7 @@
    |---|---|
    | Автономная программа | `build\SynthiPro_artefacts\Release\Standalone\SYNTHI PRO.exe` |
    | Плагин | `build\SynthiPro_artefacts\Release\VST3\SYNTHI PRO.vst3` |
-   | Установщик | `dist\SYNTHI-PRO-1.0.0-Setup.exe` |
+   | Установщик | `dist\SYNTHI-PRO-1.0.1-Setup.exe` |
 
 Вручную то же самое:
 

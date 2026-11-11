@@ -489,9 +489,12 @@ class AboutPanel : public juce::Component
 public:
     AboutPanel()
         : mail ("Dinar899@gmail.com", juce::URL ("mailto:Dinar899@gmail.com")),
-          lic ("https://www.gnu.org/licenses/agpl-3.0.html", juce::URL ("https://www.gnu.org/licenses/agpl-3.0.html"))
+          lic ("https://www.gnu.org/licenses/agpl-3.0.html", juce::URL ("https://www.gnu.org/licenses/agpl-3.0.html")),
+          repo ("https://github.com/xray14/synthi-pro", juce::URL ("https://github.com/xray14/synthi-pro"))
     {
-        addAndMakeVisible (mail); addAndMakeVisible (lic); addAndMakeVisible (close);
+        addAndMakeVisible (mail); addAndMakeVisible (lic); addAndMakeVisible (repo); addAndMakeVisible (close);
+        repo.setColour (juce::HyperlinkButton::textColourId, cAmber); repo.setJustificationType (juce::Justification::centredLeft);
+        repo.setTooltip (TR ("Open the source code repository", "Открыть репозиторий с исходным кодом"));
         mail.setColour (juce::HyperlinkButton::textColourId, cAmber); lic.setColour (juce::HyperlinkButton::textColourId, cTeal);
         mail.setJustificationType (juce::Justification::centredLeft); lic.setJustificationType (juce::Justification::centredLeft);
         mail.setTooltip (TR ("Write an e-mail to the author", "Написать автору письмо"));
@@ -502,7 +505,8 @@ public:
     {
         const auto c = card();
         mail.setBounds (c.getX() + 150, c.getY() + 166, 300, 20);
-        lic.setBounds (c.getX() + 30, c.getY() + 356, 400, 20);
+        repo.setBounds (c.getX() + 150, c.getY() + 336, 400, 20);
+        lic.setBounds (c.getX() + 150, c.getY() + 358, 400, 20);
         close.setBounds (c.getCentreX() - 60, c.getBottom() - 42, 120, 28);
     }
     void paint (juce::Graphics& g) override
@@ -515,7 +519,7 @@ public:
         g.setFont (fnt (32.0f, true));
         g.setGradientFill (juce::ColourGradient (juce::Colours::white, 0, cf.getY() + 30.0f, juce::Colour (0xff9aa0a6), 0, cf.getY() + 62.0f, false)); g.drawText ("SYNTHI", x + 110, c.getY() + 26, 124, 40, juce::Justification::centredLeft);
         g.setGradientFill (juce::ColourGradient (juce::Colour (0xffffb03a), 0, cf.getY() + 30.0f, juce::Colour (0xffe86a00), 0, cf.getY() + 62.0f, false)); g.drawText ("PRO", x + 234, c.getY() + 26, 90, 40, juce::Justification::centredLeft);
-        g.setFont (fnt (13.5f)); g.setColour (cInk); g.drawText (TR ("Version 1.0.0  -  matrix modular synthesizer", "Версия 1.0.0  -  матричный модульный синтезатор"), x + 110, c.getY() + 68, w - 110, 18, juce::Justification::centredLeft);
+        g.setFont (fnt (13.5f)); g.setColour (cInk); g.drawText (TR ("Version 1.0.1  -  matrix modular synthesizer", "Версия 1.0.1  -  матричный модульный синтезатор"), x + 110, c.getY() + 68, w - 110, 18, juce::Justification::centredLeft);
         g.setColour (cDim); g.drawText ("Standalone / VST3  -  Windows 10/11 x64", x + 110, c.getY() + 88, w - 110, 18, juce::Justification::centredLeft);
         g.setColour (cLine); g.fillRect (x, c.getY() + 126, w, 1); g.fillRect (x, c.getY() + 198, w, 1);
         g.setColour (cDim); g.drawText (TR ("Author:", "Автор:"), x, c.getY() + 140, 116, 20, juce::Justification::centredLeft); g.drawText (TR ("Contact:", "Связь с автором:"), x, c.getY() + 166, 116, 20, juce::Justification::centredLeft);
@@ -526,15 +530,16 @@ public:
                               "SYNTHI PRO is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License, "
                               "version 3, as published by the Free Software Foundation.\n"
                               "This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of "
-                              "MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. The complete source code is available from the author on request "
-                              "at the address above. Full text of the license:",
-                              "Copyright (C) 2026 Khafizov Dinar.\n"
+                              "MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.",
+                             "Copyright (C) 2026 Khafizov Dinar.\n"
                               "SYNTHI PRO - свободное программное обеспечение: вы можете распространять и изменять его на условиях Стандартной общественной "
                               "лицензии GNU Affero (GNU AGPL) версии 3, опубликованной Фондом свободного программного обеспечения.\n"
                               "Программа распространяется в надежде, что она будет полезной, но БЕЗ КАКИХ-ЛИБО ГАРАНТИЙ, в том числе без подразумеваемых "
-                              "гарантий ТОВАРНОГО СОСТОЯНИЯ и ПРИГОДНОСТИ ДЛЯ КОНКРЕТНОЙ ЦЕЛИ. Полный исходный код предоставляется автором по запросу "
-                              "на указанный выше адрес. Полный текст лицензии:"),
-                          x, c.getY() + 232, w, 122, juce::Justification::topLeft, 12, 1.0f);
+                              "гарантий ТОВАРНОГО СОСТОЯНИЯ и ПРИГОДНОСТИ ДЛЯ КОНКРЕТНОЙ ЦЕЛИ."),
+                         x, c.getY() + 232, w, 100, juce::Justification::topLeft, 12, 1.0f);
+        g.setColour (cDim);
+        g.drawText (TR ("Source code:", "Исходный код:"), x, c.getY() + 336, 116, 20, juce::Justification::centredLeft);
+        g.drawText (TR ("License text:", "Текст лицензии:"), x, c.getY() + 358, 116, 20, juce::Justification::centredLeft);
         g.setFont (fnt (11.0f)); g.setColour (cDim);
         g.drawFittedText (TR ("Built with the JUCE 8 framework (AGPLv3). VST is a registered trademark of Steinberg Media Technologies GmbH. "
                               "ASIO is a trademark and software of Steinberg Media Technologies GmbH. "
@@ -547,7 +552,7 @@ public:
     void mouseDown (const juce::MouseEvent& e) override { if (! card().contains (e.getPosition())) setVisible (false); }
 
 private:
-    juce::HyperlinkButton mail, lic; juce::TextButton close;
+    juce::HyperlinkButton mail, lic, repo; juce::TextButton close;
 };
 } // namespace
 
@@ -892,7 +897,7 @@ private:
         m.addSeparator();
         m.addItem (4, TR ("Audio device, sample rate, buffer size and MIDI inputs: button \"Options\" in the window title bar (standalone) or the DAW settings (VST3)",
                           "Аудиоустройство, частота дискретизации, размер буфера и MIDI-входы: кнопка «Options» в заголовке окна (автономная версия) или настройки DAW (VST3)"), false);
-        m.addItem (5, "SYNTHI PRO 1.0  -  " + juce::String (kNumParams()) + TR (" parameters", " параметров"), false);
+        m.addItem (5, "SYNTHI PRO 1.0.1  -  " + juce::String (kNumParams()) + TR (" parameters", " параметров"), false);
         juce::Component::SafePointer<Content> safe (this);
         m.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (settingsBtn), [safe] (int r)
         {

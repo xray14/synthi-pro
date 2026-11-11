@@ -4,7 +4,7 @@
 
 ### Установка
 
-1. Запустите `SYNTHI-PRO-1.0.0-Setup.exe`.
+1. Запустите `SYNTHI-PRO-1.0.1-Setup.exe`.
 2. Выберите компоненты: автономная программа, плагин VST3, документация.
 3. Плагин ставится в стандартную папку `C:\Program Files\Common Files\VST3\SYNTHI PRO.vst3`,
    программа — в `C:\Program Files\SYNTHI PRO`.
@@ -40,7 +40,7 @@
 
 ### Installation
 
-1. Run `SYNTHI-PRO-1.0.0-Setup.exe`.
+1. Run `SYNTHI-PRO-1.0.1-Setup.exe`.
 2. Choose components: standalone application, VST3 plug-in, documentation.
 3. The plug-in goes to the standard folder `C:\Program Files\Common Files\VST3\SYNTHI PRO.vst3`,
    the application to `C:\Program Files\SYNTHI PRO`.

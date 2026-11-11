@@ -1,6 +1,6 @@
 ; SYNTHI PRO - Inno Setup 6 script. Build the project first (build.bat), then compile this file with ISCC.exe.
 #define AppName "SYNTHI PRO"
-#define AppVersion "1.0.0"
+#define AppVersion "1.0.1"
 #define Artefacts "..\build\SynthiPro_artefacts\Release"
 
 [Setup]
@@ -23,6 +23,8 @@ UninstallDisplayIcon={app}\SYNTHI PRO.exe
 SetupIconFile=..\assets\icons\synthipro.ico
 LicenseFile=..\LICENSE.txt
 AppContact=Dinar899@gmail.com
+AppPublisherURL=https://github.com/xray14/synthi-pro
+AppSupportURL=https://github.com/xray14/synthi-pro/issues
 AppCopyright=Copyright (C) 2026 Khafizov Dinar
 
 [Languages]
@@ -46,7 +48,7 @@ Source: "{#Artefacts}\Standalone\SYNTHI PRO.exe"; DestDir: "{app}"; Components: 
 Source: "{#Artefacts}\VST3\SYNTHI PRO.vst3\*"; DestDir: "{commoncf64}\VST3\SYNTHI PRO.vst3"; Components: vst3; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\docs\*.md"; DestDir: "{app}\docs"; Components: docs; Flags: ignoreversion
 Source: "..\LICENSE.txt"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\COPYING.txt"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\NOTICE.txt"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\SYNTHI PRO"; Filename: "{app}\SYNTHI PRO.exe"; Components: standalone

@@ -59,7 +59,7 @@ tests\run_engine_test.bat
 Copyright (C) 2026 Khafizov Dinar.
 
 SYNTHI PRO is free software, licensed under the GNU Affero General Public License version 3 — see
-[LICENSE.txt](LICENSE.txt) and [COPYING.txt](COPYING.txt). It is distributed WITHOUT ANY WARRANTY.
+[LICENSE.txt](LICENSE.txt) (full text) and [NOTICE.txt](NOTICE.txt) (copyright and third-party notices). It is distributed WITHOUT ANY WARRANTY.
 
 SYNTHI PRO — свободное программное обеспечение под лицензией GNU AGPL версии 3. Программа поставляется
 без каких-либо гарантий.

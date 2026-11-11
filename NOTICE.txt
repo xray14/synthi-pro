@@ -1,0 +1,37 @@
+SYNTHI PRO - matrix modular synthesizer
+Copyright (C) 2026 Khafizov Dinar <Dinar899@gmail.com>
+
+This program is free software: you can redistribute it and/or modify it under the terms of the
+GNU Affero General Public License as published by the Free Software Foundation, version 3 of the License.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
+the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General
+Public License for more details.
+
+The full text of the GNU Affero General Public License is in the file LICENSE.txt distributed with this program.
+It is also available at <https://www.gnu.org/licenses/agpl-3.0.html>.
+
+The complete corresponding source code is available at <https://github.com/xray14/synthi-pro>.
+Contact: Dinar899@gmail.com
+
+----------------------------------------------------------------------------------------------------
+Третьи стороны / Third-party components
+
+JUCE 8 framework - Copyright (C) Raw Material Software Limited. Used under the GNU AGPLv3.
+    https://juce.com   (this is the reason SYNTHI PRO itself is licensed under the AGPLv3)
+VST 3 SDK - Copyright (C) Steinberg Media Technologies GmbH, bundled with JUCE.
+    VST is a registered trademark of Steinberg Media Technologies GmbH.
+ASIO SDK - Copyright (C) Steinberg Media Technologies GmbH. Used under the terms of its GPLv3 option.
+    ASIO is a trademark and software of Steinberg Media Technologies GmbH.
+
+SYNTHI PRO is an independent project. It is not affiliated with, sponsored or endorsed by
+Electronic Music Studios (EMS) or Arturia. All product names are trademarks of their respective owners.
+
+----------------------------------------------------------------------------------------------------
+Кратко по-русски
+
+SYNTHI PRO - свободное программное обеспечение. Его можно бесплатно использовать, копировать,
+распространять и изменять на условиях лицензии GNU Affero General Public License версии 3 (AGPLv3).
+Главные условия: при распространении программы или её изменённых версий нужно сохранять это уведомление
+об авторских правах, распространять их под той же лицензией и предоставлять получателям исходный код.
+Программа поставляется «как есть», без каких-либо гарантий.
