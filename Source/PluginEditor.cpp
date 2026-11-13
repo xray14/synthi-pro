@@ -519,7 +519,7 @@ public:
         g.setFont (fnt (32.0f, true));
         g.setGradientFill (juce::ColourGradient (juce::Colours::white, 0, cf.getY() + 30.0f, juce::Colour (0xff9aa0a6), 0, cf.getY() + 62.0f, false)); g.drawText ("SYNTHI", x + 110, c.getY() + 26, 124, 40, juce::Justification::centredLeft);
         g.setGradientFill (juce::ColourGradient (juce::Colour (0xffffb03a), 0, cf.getY() + 30.0f, juce::Colour (0xffe86a00), 0, cf.getY() + 62.0f, false)); g.drawText ("PRO", x + 234, c.getY() + 26, 90, 40, juce::Justification::centredLeft);
-        g.setFont (fnt (13.5f)); g.setColour (cInk); g.drawText (TR ("Version 1.0.1  -  matrix modular synthesizer", "Версия 1.0.1  -  матричный модульный синтезатор"), x + 110, c.getY() + 68, w - 110, 18, juce::Justification::centredLeft);
+        g.setFont (fnt (13.5f)); g.setColour (cInk); g.drawText (TR ("Version 1.1.0  -  matrix modular synthesizer", "Версия 1.1.0  -  матричный модульный синтезатор"), x + 110, c.getY() + 68, w - 110, 18, juce::Justification::centredLeft);
         g.setColour (cDim); g.drawText ("Standalone / VST3  -  Windows 10/11 x64", x + 110, c.getY() + 88, w - 110, 18, juce::Justification::centredLeft);
         g.setColour (cLine); g.fillRect (x, c.getY() + 126, w, 1); g.fillRect (x, c.getY() + 198, w, 1);
         g.setColour (cDim); g.drawText (TR ("Author:", "Автор:"), x, c.getY() + 140, 116, 20, juce::Justification::centredLeft); g.drawText (TR ("Contact:", "Связь с автором:"), x, c.getY() + 166, 116, 20, juce::Justification::centredLeft);
@@ -553,6 +553,34 @@ public:
 
 private:
     juce::HyperlinkButton mail, lic, repo; juce::TextButton close;
+};
+//======================================================================================================
+// Регуляторы с поддержкой MIDI Learn: правый щелчок не меняет значение, а вызывает onRight.
+struct LearnSlider : public juce::Slider
+{
+    using juce::Slider::Slider;
+    std::function<void()> onRight;
+    void mouseDown (const juce::MouseEvent& e) override { right = e.mods.isPopupMenu(); if (right) { if (onRight) onRight(); } else juce::Slider::mouseDown (e); }
+    void mouseDrag (const juce::MouseEvent& e) override { if (! right) juce::Slider::mouseDrag (e); }
+    void mouseUp (const juce::MouseEvent& e) override { if (! right) juce::Slider::mouseUp (e); right = false; }
+    bool right = false;
+};
+struct LearnButton : public juce::TextButton
+{
+    using juce::TextButton::TextButton;
+    std::function<void()> onRight;
+    void mouseDown (const juce::MouseEvent& e) override { right = e.mods.isPopupMenu(); if (right) { if (onRight) onRight(); } else juce::TextButton::mouseDown (e); }
+    void mouseDrag (const juce::MouseEvent& e) override { if (! right) juce::TextButton::mouseDrag (e); }
+    void mouseUp (const juce::MouseEvent& e) override { if (! right) juce::TextButton::mouseUp (e); right = false; }
+    bool right = false;
+};
+struct LearnCombo : public juce::ComboBox
+{
+    std::function<void()> onRight;
+    void mouseDown (const juce::MouseEvent& e) override { right = e.mods.isPopupMenu(); if (right) { if (onRight) onRight(); } else juce::ComboBox::mouseDown (e); }
+    void mouseDrag (const juce::MouseEvent& e) override { if (! right) juce::ComboBox::mouseDrag (e); }
+    void mouseUp (const juce::MouseEvent& e) override { if (! right) juce::ComboBox::mouseUp (e); right = false; }
+    bool right = false;
 };
 } // namespace
 
@@ -600,9 +628,64 @@ public:
         const int v = proc.engine.uiVoices.load();
         if (v != shownVoices) { shownVoices = v; voicesLabel.setText (TR ("Voices: ", "Голоса: ") + juce::String (v), juce::dontSendNotification); }
         if (++slow >= 10) { slow = 0; updatePresetName(); if (! easy) routesLabel.setText (TR ("Active routes: ", "Активных маршрутов: ") + juce::String (matrix.activeRoutes()), juce::dontSendNotification); }
+
+        // экранные колёса повторяют движения колёс MIDI-клавиатуры
+        const int hs = proc.hwSeq.load();
+        if (hs != seenHw)
+        {
+            seenHw = hs;
+            if (bendSl != nullptr && ! bendSl->isMouseButtonDown()) bendSl->setValue (proc.hwBend.load(), juce::dontSendNotification);
+            if (modSl != nullptr && ! modSl->isMouseButtonDown()) modSl->setValue (proc.hwMod.load(), juce::dontSendNotification);
+        }
+
+        // MIDI Learn: мигание ожидающего регулятора и сообщение о созданной привязке
+        const int ls = proc.linkSeq.load();
+        if (ls != seenLink)
+        {
+            seenLink = ls;
+            const int p = proc.lastLinkParam.load();
+            if (p >= 0) { linkMsg = TR ("Linked: ", "Привязано: ") + fullName (juce::String (paramDefs()[(size_t) p].id)) + juce::String::fromUTF8 ("  \xe2\x86\x90  CC ") + juce::String (proc.lastLinkCC.load()); linkTicks = 75; }
+        }
+        const int lp = proc.learnParam.load();
+        if (lp >= 0 || linkTicks > 0 || lp != lastLearn) repaint();
+        lastLearn = lp;
+        if (linkTicks > 0) --linkTicks;
+    }
+
+    void paintOverChildren (juce::Graphics& g) override
+    {
+        if (about != nullptr && about->isVisible()) return;
+        const int lp = proc.learnParam.load();
+        for (const auto& t : learnTargets)
+        {
+            if (! t.second->isShowing()) continue;
+            const auto b = getLocalArea (t.second, t.second->getLocalBounds()).toFloat();
+            if (t.first == lp)
+            {
+                const float pulse = 0.5f + 0.5f * std::sin ((float) (juce::Time::getMillisecondCounterHiRes() * 0.012));
+                g.setColour (juce::Colour (0xffff8a80).withAlpha (0.20f + 0.50f * pulse)); g.fillRoundedRectangle (b.expanded (3.0f), 7.0f);
+                g.setColour (juce::Colour (0xffff5a4d).withAlpha (0.6f + 0.4f * pulse)); g.drawRoundedRectangle (b.expanded (3.0f), 7.0f, 1.6f);
+            }
+            else if (proc.ccForParam (t.first) >= 0)        // метка «привязан к контроллеру»
+            {
+                g.setColour (juce::Colour (0xffff8a80)); g.fillEllipse (b.getRight() - 5.0f, b.getY() - 1.0f, 6.0f, 6.0f);
+                g.setColour (juce::Colours::black); g.drawEllipse (b.getRight() - 5.0f, b.getY() - 1.0f, 6.0f, 6.0f, 0.8f);
+            }
+        }
+        juce::String msg;
+        if (lp >= 0) msg = TR ("MIDI Learn: move a knob, fader or button on your controller  (right-click to cancel)", "MIDI Learn: подвигайте ручку, фейдер или кнопку на контроллере  (правый щелчок - отмена)");
+        else if (linkTicks > 0) msg = linkMsg;
+        if (msg.isNotEmpty())
+        {
+            const auto r = juce::Rectangle<float> (190.0f, 52.0f, 836.0f, 30.0f);
+            g.setColour (juce::Colour (0xf0140f0e)); g.fillRoundedRectangle (r, 6.0f);
+            g.setColour (juce::Colour (0xffff8a80)); g.drawRoundedRectangle (r, 6.0f, 1.4f);
+            g.setFont (fnt (13.5f, true)); g.drawText (msg, r.reduced (10.0f, 0.0f), juce::Justification::centred);
+        }
     }
 
     juce::MidiKeyboardComponent& keyboard() { return kb; }
+    void demo (int what) { if (what == 1) toggleBrowser(); else if (what == 2) showAbout(); }   // для съёмки экранов
 
 private:
     struct PanelDef { juce::Rectangle<int> r; juce::String title; juce::Colour c; };
@@ -612,9 +695,38 @@ private:
 
     void panel (int x, int y, int w, int h, const juce::String& title, juce::Colour c) { panels.push_back ({ { x, y, w, h }, title, c }); }
 
+    // Регистрация регулятора для MIDI Learn. Правый щелчок: свободный регулятор сразу ждёт контроллер,
+    // у привязанного открывается меню «назначить другой / снять назначение».
+    template <typename T> void learnable (T* comp, const char* id)
+    {
+        const int idx = paramIndex (juce::String (id).toStdString());
+        if (idx < 0) return;
+        learnTargets.push_back ({ idx, comp });
+        comp->onRight = [this, idx, comp] { learnClick (idx, comp); };
+    }
+    void learnClick (int idx, juce::Component* comp)
+    {
+        if (proc.learnParam.load() == idx) { proc.learnParam.store (-1); return; }        // повторный щелчок — отмена
+        const int cc = proc.ccForParam (idx);
+        if (cc < 0) { proc.learnParam.store (idx); return; }
+        proc.learnParam.store (-1);
+        juce::PopupMenu m;
+        m.addItem (1, TR ("Assigned to MIDI controller CC ", "Назначен на MIDI-контроллер CC ") + juce::String (cc), false);
+        m.addItem (2, TR ("Assign another controller", "Назначить другой контроллер"));
+        m.addItem (3, TR ("Remove assignment", "Снять назначение"));
+        juce::Component::SafePointer<Content> safe (this);
+        m.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (comp), [safe, idx] (int r)
+        {
+            if (safe == nullptr) return;
+            if (r == 2) safe->proc.learnParam.store (idx);
+            else if (r == 3) { safe->proc.clearMidiLink (idx); safe->repaint(); }
+        });
+    }
+
     juce::Slider* knob (const char* id, const juce::String& label, int x, int y, juce::Colour c, int size = KS, int cell = CW)
     {
-        auto* s = own<juce::Slider> (juce::Slider::RotaryHorizontalVerticalDrag, juce::Slider::NoTextBox);
+        auto* s = own<LearnSlider> (juce::Slider::RotaryHorizontalVerticalDrag, juce::Slider::NoTextBox);
+        learnable (s, id);
         s->setBounds (x + (cell - size) / 2, y, size, size);
         s->setColour (juce::Slider::rotarySliderFillColourId, c);
         s->setPopupDisplayEnabled (true, false, &editor);
@@ -627,7 +739,8 @@ private:
     }
     juce::ComboBox* combo (const char* id, int x, int y, int w)
     {
-        auto* c = own<juce::ComboBox>();
+        auto* c = own<LearnCombo>();
+        learnable (c, id);
         if (auto* ch = dynamic_cast<juce::AudioParameterChoice*> (proc.apvts.getParameter (id))) c->addItemList (ch->choices, 1);
         c->setBounds (x, y, w, 22); c->setTooltip (fullName (id));
         ca.add (new APVTS::ComboBoxAttachment (proc.apvts, id, *c));
@@ -635,7 +748,8 @@ private:
     }
     juce::TextButton* toggle (const char* id, const juce::String& text, int x, int y, int w, int h, juce::Colour c)
     {
-        auto* b = own<juce::TextButton> (text);
+        auto* b = own<LearnButton> (text);
+        learnable (b, id);
         b->setClickingTogglesState (true); b->setColour (juce::TextButton::buttonOnColourId, c); b->setBounds (x, y, w, h); b->setTooltip (fullName (id));
         ba.add (new APVTS::ButtonAttachment (proc.apvts, id, *b));
         return b;
@@ -709,6 +823,7 @@ private:
             s->setRange (lo, hi); s->setValue (0.0, juce::dontSendNotification); s->setBounds (x, 696, 26, 86); s->setTooltip (tip);
             s->onValueChange = [s, &target] { target.store ((float) s->getValue()); };
             if (spring) s->onDragEnd = [s] { s->setValue (0.0, juce::sendNotificationSync); };
+            (spring ? bendSl : modSl) = s;
             auto* l = own<juce::Label> (juce::String(), spring ? "BEND" : "MOD"); l->setFont (fnt (9.0f)); l->setColour (juce::Label::textColourId, cDim);
             l->setJustificationType (juce::Justification::centred); l->setBounds (x - 6, 782, 38, 12); l->setInterceptsMouseClicks (false, false);
         };
@@ -895,9 +1010,12 @@ private:
         m.addItem (2, TR ("Open user presets folder", "Открыть папку пользовательских пресетов"));
         m.addItem (3, TR ("Stop all notes (Panic)", "Снять все ноты (Panic)"));
         m.addSeparator();
+        m.addItem (8, TR ("MIDI Learn: right-click any knob, list or switch, then move a control on your MIDI controller", "MIDI Learn: правый щелчок по ручке, списку или переключателю, затем подвигайте регулятор на MIDI-контроллере"), false);
+        m.addItem (7, TR ("Remove all MIDI assignments (", "Снять все MIDI-назначения (") + juce::String (proc.numMidiLinks()) + ")", proc.numMidiLinks() > 0);
+        m.addSeparator();
         m.addItem (4, TR ("Audio device, sample rate, buffer size and MIDI inputs: button \"Options\" in the window title bar (standalone) or the DAW settings (VST3)",
                           "Аудиоустройство, частота дискретизации, размер буфера и MIDI-входы: кнопка «Options» в заголовке окна (автономная версия) или настройки DAW (VST3)"), false);
-        m.addItem (5, "SYNTHI PRO 1.0.1  -  " + juce::String (kNumParams()) + TR (" parameters", " параметров"), false);
+        m.addItem (5, "SYNTHI PRO 1.1.0  -  " + juce::String (kNumParams()) + TR (" parameters", " параметров"), false);
         juce::Component::SafePointer<Content> safe (this);
         m.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (settingsBtn), [safe] (int r)
         {
@@ -905,6 +1023,7 @@ private:
             if (r > 100) safe->editor.setScale ((r - 100) / 100.0);
             else if (r == 2) { auto d = PresetManager::userDir(); d.createDirectory(); d.revealToUser(); }
             else if (r == 3) { safe->proc.panicFlag = true; safe->proc.keyboardState.allNotesOff (0); }
+            else if (r == 7) { safe->proc.clearAllMidiLinks(); safe->repaint(); }
             else if (r == 6) safe->logo.flash();                 // блик на логотипе, затем окно «О программе»
         });
     }
@@ -922,6 +1041,9 @@ private:
     juce::Label status, routesLabel, voicesLabel, octLabel;
     juce::TextButton* presetBtn = nullptr; juce::TextButton* settingsBtn = nullptr; juce::TextButton* rangeBtn = nullptr;
     int kbKeys = 88, kbOct = 4, shownVoices = -1, slow = 0;
+    std::vector<std::pair<int, juce::Component*>> learnTargets;      // параметр -> регулятор (для MIDI Learn)
+    juce::Slider* bendSl = nullptr; juce::Slider* modSl = nullptr;
+    int seenHw = 0, seenLink = 0, lastLearn = -1, linkTicks = 0; juce::String linkMsg;
     // Привязки параметров объявлены последними: уничтожаются раньше компонентов, к которым привязаны.
     juce::OwnedArray<APVTS::SliderAttachment> sa;
     juce::OwnedArray<APVTS::ComboBoxAttachment> ca;
@@ -943,10 +1065,16 @@ SynthiProEditor::SynthiProEditor (SynthiProProcessor& p) : AudioProcessorEditor 
     const double s = juce::jlimit (0.7, 2.0, proc.getUiProp ("scale", "1").getDoubleValue());
     setSize (juce::roundToInt (BaseW * s), juce::roundToInt (BaseH * s));
     startTimerHz (30);
+    if (juce::JUCEApplicationBase::isStandaloneApp())
+    {
+        shotDir = juce::SystemStats::getEnvironmentVariable ("SYNTHIPRO_SHOTS", {});
+        shotWait = 30;
+    }
 }
 
 SynthiProEditor::~SynthiProEditor()
 {
+    proc.learnParam.store (-1);
     stopTimer();
     content.reset();
     tooltip.reset();
@@ -984,4 +1112,55 @@ void SynthiProEditor::timerCallback()
     if (content == nullptr) return;
     content->tick();
     if (! focusGrabbed && isShowing()) { content->keyboard().grabKeyboardFocus(); focusGrabbed = true; }
+    if (shotDir.isNotEmpty()) shotTick();
+}
+
+void SynthiProEditor::saveShot (const juce::String& name)
+{
+    const auto img = content->createComponentSnapshot (content->getLocalBounds(), true, 2.0f);
+    const auto file = juce::File (shotDir).getChildFile (name);
+    file.deleteFile();
+    juce::FileOutputStream out (file);
+    if (out.openedOk()) juce::PNGImageFormat().writeImageToStream (img, out);
+}
+
+void SynthiProEditor::shotLog (const juce::String& line)
+{
+    juce::File (shotDir).getChildFile ("midi_test.txt").appendText (line + "\r\n");
+}
+
+void SynthiProEditor::shotTick()
+{
+    if (shotWait > 0) { --shotWait; return; }
+    auto setup = [this] (const char* lang, const char* mode, const char* preset)
+    {
+        proc.setUiProp ("lang", lang); proc.setUiProp ("mode", mode);
+        if (preset != nullptr) proc.presets.load (proc.presets.indexOf (preset));
+        rebuild();
+    };
+    switch (shotStep++)
+    {
+        case 0:  proc.getStateInformation (shotSaved); juce::File (shotDir).createDirectory(); juce::File (shotDir).getChildFile ("midi_test.txt").deleteFile(); setup ("ru", "pro", "Berlin School"); break;
+        case 1:  saveShot ("01_pro_ru.png"); content->demo (1); break;
+        case 2:  saveShot ("02_presets_ru.png"); setup ("ru", "easy", "Warm Analog Pad"); break;
+        case 3:  saveShot ("03_easy_ru.png"); setup ("ru", "pro", "Evolving Organism"); break;
+        case 4:  saveShot ("04_matrix_ru.png"); content->demo (2); break;
+        case 5:  saveShot ("05_about_ru.png"); setup ("en", "pro", "Acid Line"); break;
+        case 6:  saveShot ("06_pro_en.png"); shotMap = proc.midiMapToString(); setup ("ru", "pro", "Solo Saw"); break;
+        case 7:  proc.learnParam.store (sp::P_FCut); break;                                  // как правый щелчок по ручке Cutoff
+        case 8:  saveShot ("07_midi_learn_ru.png"); proc.debugInjectCC (21, 64); break;       // «повернули ручку CC 21»
+        case 9:  shotLog ("after learn: f_cut is linked to CC " + juce::String (proc.ccForParam (sp::P_FCut)) + ", learn mode " + juce::String (proc.learnParam.load()));
+                 saveShot ("08_midi_linked_ru.png"); proc.debugInjectCC (21, 127); break;
+        case 10: shotLog ("CC21=127 -> f_cut = " + juce::String (proc.apvts.getRawParameterValue ("f_cut")->load(), 1) + " Hz"); proc.debugInjectCC (21, 0); break;
+        case 11: shotLog ("CC21=0   -> f_cut = " + juce::String (proc.apvts.getRawParameterValue ("f_cut")->load(), 1) + " Hz"); proc.debugInjectCC (21, 64); break;
+        case 12: shotLog ("CC21=64  -> f_cut = " + juce::String (proc.apvts.getRawParameterValue ("f_cut")->load(), 1) + " Hz"); proc.debugInjectCC (1, 100); break;
+        case 13: shotLog ("CC1=100  -> hwMod = " + juce::String (proc.hwMod.load(), 3)); saveShot ("09_mod_wheel_follows.png");
+                 proc.debugInjectCC (1, 0); proc.midiMapFromString (shotMap); proc.saveMidiMap(); break;
+        default:
+            shotDir.clear();
+            proc.setStateInformation (shotSaved.getData(), (int) shotSaved.getSize());      // вернуть всё как было
+            juce::JUCEApplicationBase::quit();
+            return;
+    }
+    shotWait = 20;
 }

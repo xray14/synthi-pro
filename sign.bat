@@ -31,7 +31,7 @@ copy /y NOTICE.txt dist\ >nul
 if not exist "%ISCC%" goto noinno
 "%ISCC%" /Q installer\SynthiPro.iss
 if errorlevel 1 exit /b 1
-"%SIGNTOOL%" sign %OPTS% "dist\SYNTHI-PRO-1.0.1-Setup.exe"
+"%SIGNTOOL%" sign %OPTS% "dist\SYNTHI-PRO-1.1.0-Setup.exe"
 if errorlevel 1 exit /b 1
 echo Signed: EXE, VST3 and installer are in the dist folder.
 exit /b 0

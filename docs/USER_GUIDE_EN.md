@@ -91,8 +91,23 @@ PRO shows every module, the matrix and the sequencer.
 - Computer keys: the A S D F… row plays white keys, W E T Y U… black keys. The "−" / "+" buttons shift the octave.
 - The range button cycles 88 / 61 / 49 keys.
 - MIDI: notes with velocity, pitch bend, mod wheel (CC 1), sustain pedal (CC 64), aftertouch.
+- The on-screen BEND and MOD wheels follow the wheels of your MIDI keyboard.
+- The mod wheel always adds vibrato from LFO 1; the "Mod>Vib" knob in Voices / Global sets its depth.
 - Every parameter can be automated in a DAW.
 
+### MIDI Learn — assigning hardware knobs and faders
+
+1. Right-click a knob, list or switch in the window — it starts blinking light red.
+2. Turn a knob, move a fader or press a button on your MIDI controller. The link is made: a message with the
+   controller number appears at the top and a red dot stays on the control.
+3. Right-clicking the blinking control again cancels.
+4. Right-clicking an assigned control opens a menu: "Assign another controller" or "Remove assignment".
+5. Settings -> "Remove all MIDI assignments" clears everything.
+
+One controller drives one parameter and one parameter has one controller: a new link replaces the old one.
+Links are stored in `Documents\SYNTHI PRO\midi_map.txt` and apply to all presets; changing a preset keeps them.
+CC 0, 1, 32, 64 and 120-127 are reserved and cannot be assigned. Matrix pins and sequencer steps cannot be
+assigned through MIDI Learn.
 ## 9. State
 
 The standalone version remembers the whole patch, language, mode and scale on exit and restores them on launch.

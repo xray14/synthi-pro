@@ -15,6 +15,7 @@ Matrix modular software synthesizer for Windows 10/11 (x64): standalone applicat
 - 16-step sequencer, mono / legato / poly (up to 16 voices), glide
 - Effects: distortion, saturation, phaser, chorus, delay, reverb, stereo width
 - 156 factory presets in 13 categories, user presets, favorites, random patch
+- MIDI Learn: right-click any control and move a knob or fader on your controller
 - EASY and PRO modes, English and Russian interface, resizable window
 - WASAPI, DirectSound and ASIO in the standalone version
 

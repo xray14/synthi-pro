@@ -1,6 +1,6 @@
 ; SYNTHI PRO - Inno Setup 6 script. Build the project first (build.bat), then compile this file with ISCC.exe.
 #define AppName "SYNTHI PRO"
-#define AppVersion "1.0.1"
+#define AppVersion "1.1.0"
 #define Artefacts "..\build\SynthiPro_artefacts\Release"
 
 [Setup]

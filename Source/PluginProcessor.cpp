@@ -67,13 +67,111 @@ SynthiProProcessor::SynthiProProcessor()
     for (int i = 0; i < P_COUNT; ++i)
     {
         raw[i] = apvts.getRawParameterValue (juce::String (defs[(size_t) i].id));
-        jassert (raw[i] != nullptr);
+        params[i] = apvts.getParameter (juce::String (defs[(size_t) i].id));
+        jassert (raw[i] != nullptr && params[i] != nullptr);
     }
+    for (auto& c : ccMap) c.store (-1);
+    for (auto& c : ccPending) c.store (-1.0f);
     presets.rescan();
     if (! presets.list().empty())
     {
         presets.load (0);
         setUiProp ("preset", presets.list()[0].name);
+    }
+    if (midiMapFile().existsAsFile())                 // привязки контроллера общие для всех экземпляров и проектов
+        midiMapFromString (midiMapFile().loadFileAsString());
+    startTimerHz (60);
+}
+
+//======================================================================================================
+// MIDI Learn
+juce::File SynthiProProcessor::midiMapFile()
+{
+    return PresetManager::userDir().getSiblingFile ("midi_map.txt");
+}
+
+juce::String SynthiProProcessor::midiMapToString() const
+{
+    juce::StringArray items;
+    const auto& defs = paramDefs();
+    for (int cc = 0; cc < 128; ++cc)
+    {
+        const int p = ccMap[cc].load();
+        if (p >= 0 && p < P_COUNT) items.add (juce::String (cc) + "=" + juce::String (defs[(size_t) p].id));
+    }
+    return items.joinIntoString (";");
+}
+
+void SynthiProProcessor::midiMapFromString (const juce::String& s)
+{
+    for (auto& c : ccMap) c.store (-1);
+    juce::StringArray items;
+    items.addTokens (s.trim(), ";\r\n", "");
+    for (const auto& it : items)
+    {
+        if (! it.containsChar ('=')) continue;
+        const int cc = it.upToFirstOccurrenceOf ("=", false, false).trim().getIntValue();
+        const int p = paramIndex (it.fromFirstOccurrenceOf ("=", false, false).trim().toStdString());
+        if (isLearnableCC (cc) && p >= 0) ccMap[cc].store (p);
+    }
+}
+
+void SynthiProProcessor::saveMidiMap()
+{
+    const auto s = midiMapToString();
+    setUiProp ("midimap", s);
+    const auto f = midiMapFile();
+    f.getParentDirectory().createDirectory();
+    f.replaceWithText (s);
+}
+
+int SynthiProProcessor::ccForParam (int paramIndex) const
+{
+    for (int cc = 0; cc < 128; ++cc)
+        if (ccMap[cc].load() == paramIndex) return cc;
+    return -1;
+}
+
+int SynthiProProcessor::numMidiLinks() const
+{
+    int n = 0;
+    for (const auto& c : ccMap) if (c.load() >= 0) ++n;
+    return n;
+}
+
+void SynthiProProcessor::clearMidiLink (int paramIndex)
+{
+    for (auto& c : ccMap) if (c.load() == paramIndex) c.store (-1);
+    saveMidiMap();
+}
+
+void SynthiProProcessor::clearAllMidiLinks()
+{
+    for (auto& c : ccMap) c.store (-1);
+    saveMidiMap();
+}
+
+void SynthiProProcessor::timerCallback()
+{
+    // завершение привязки: аудиопоток сообщил номер контроллера, который пошевелили
+    const int cc = learnedCC.exchange (-1);
+    const int lp = learnParam.load();
+    if (cc >= 0 && lp >= 0 && lp < P_COUNT)
+    {
+        for (auto& c : ccMap) if (c.load() == lp) c.store (-1);      // у параметра один контроллер
+        ccMap[cc].store (lp);                                        // у контроллера один параметр
+        learnParam.store (-1);
+        lastLinkParam.store (lp); lastLinkCC.store (cc); ++linkSeq;
+        saveMidiMap();
+    }
+    // применение пришедших значений контроллеров
+    for (int i = 0; i < 128; ++i)
+    {
+        const float v = ccPending[i].exchange (-1.0f);
+        if (v < 0.0f) continue;
+        const int p = ccMap[i].load();
+        if (p >= 0 && p < P_COUNT && params[p] != nullptr && std::abs (params[p]->getValue() - v) > 1.0e-6f)
+            params[p]->setValueNotifyingHost (v);
     }
 }
 
@@ -94,7 +192,11 @@ void SynthiProProcessor::handleMidi (const juce::MidiMessage& m)
 {
     if (m.isNoteOn())                engine.noteOn (m.getNoteNumber(), m.getFloatVelocity());
     else if (m.isNoteOff())          engine.noteOff (m.getNoteNumber());
-    else if (m.isPitchWheel())       engine.pitchBend ((float) (m.getPitchWheelValue() - 8192) / 8192.0f);
+    else if (m.isPitchWheel())
+    {
+        const float b = (float) (m.getPitchWheelValue() - 8192) / 8192.0f;
+        engine.pitchBend (b); hwBend.store (b); ++hwSeq;
+    }
     else if (m.isChannelPressure())  engine.aftertouch ((float) m.getChannelPressureValue() / 127.0f);
     else if (m.isAftertouch())       engine.aftertouch ((float) m.getAfterTouchValue() / 127.0f);
     else if (m.isAllNotesOff() || m.isAllSoundOff()) engine.allNotesOff();
@@ -102,8 +204,13 @@ void SynthiProProcessor::handleMidi (const juce::MidiMessage& m)
     {
         const int cc = m.getControllerNumber();
         const float v = (float) m.getControllerValue() / 127.0f;
-        if (cc == 1)        engine.modWheel (v);
+        if (cc == 1)        { engine.modWheel (v); hwMod.store (v); ++hwSeq; }
         else if (cc == 64)  engine.sustain (v >= 0.5f);
+        else if (isLearnableCC (cc))
+        {
+            if (learnParam.load (std::memory_order_relaxed) >= 0) learnedCC.store (cc);      // режим MIDI Learn: запомнить, что пошевелили
+            else if (ccMap[cc].load (std::memory_order_relaxed) >= 0) ccPending[cc].store (v);
+        }
     }
 }
 
@@ -126,6 +233,7 @@ void SynthiProProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     engine.setHostTempo (bpm);
 
     if (panicFlag.exchange (false)) engine.panic();
+    { const int d = dbgCC.exchange (-1); if (d >= 0) handleMidi (juce::MidiMessage::controllerEvent (1, d >> 8, d & 127)); }
     const float ub = uiBend.load(), um = uiMod.load();
     if (ub != lastUiBend) { lastUiBend = ub; engine.pitchBend (ub); }
     if (um != lastUiMod)  { lastUiMod = um;  engine.modWheel (um); }
@@ -160,6 +268,7 @@ void SynthiProProcessor::setStateInformation (const void* data, int sizeInBytes)
         if (xml->hasTagName (apvts.state.getType()))
         {
             apvts.replaceState (juce::ValueTree::fromXml (*xml));
+            if (apvts.state.hasProperty ("ui_midimap")) midiMapFromString (getUiProp ("midimap", {}));
             ++stateVersion;
         }
 }

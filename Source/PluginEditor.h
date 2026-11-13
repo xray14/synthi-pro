@@ -32,5 +32,15 @@ private:
     bool needRebuild = false, focusGrabbed = false;
     int seenState = 0;
 
+    // Съёмка экранов для документации: если задана переменная окружения SYNTHIPRO_SHOTS=<папка>,
+    // редактор сохраняет туда снимки интерфейса в разных состояниях, восстанавливает состояние и закрывает программу.
+    void shotTick();
+    void saveShot (const juce::String& name);
+    void shotLog (const juce::String& line);
+    juce::String shotMap;
+    juce::String shotDir;
+    int shotStep = 0, shotWait = 0;
+    juce::MemoryBlock shotSaved;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SynthiProEditor)
 };
