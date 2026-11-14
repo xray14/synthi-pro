@@ -1,5 +1,7 @@
 # SYNTHI PRO
 
+<p align="center"><img src="assets/icons/desktop_256.png" alt="SYNTHI PRO logo" width="256"></p>
+
 Matrix modular software synthesizer for Windows 10/11 (x64): standalone application and VST3 plug-in.
 Матричный модульный программный синтезатор для Windows 10/11 (x64): автономная программа и плагин VST3.
 
